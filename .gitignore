@@ -284,3 +284,4 @@ custom_character_voice/
 OUTPUT_MODEL/
 final_annotation*.txt
 *_anno.txt
+remote_result/

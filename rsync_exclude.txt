@@ -1,4 +1,14 @@
 __pycache__/
 monotonic_align/build
+monotonic_align/monotonic_align/
 monotonic_align/core.c
 .git
+logs/
+OUTPUT_MODEL/
+
+remote_result/
+processed_*.wav
+short_character_anno.txt
+final_annotation*
+custom_character_voice/
+modified_finetune_speaker.json
