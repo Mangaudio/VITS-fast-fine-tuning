@@ -131,15 +131,14 @@ if __name__ == "__main__":
                             录制或上传声音，并选择要转换的音色。
             """)
             with gr.Column():
-                record_audio = gr.Audio(label="record your voice", source="microphone")
-                upload_audio = gr.Audio(label="or upload audio here", source="upload")
+                audio = gr.Audio(label="record your voice", sources=["microphone", "upload"])
                 source_speaker = gr.Dropdown(choices=speakers, value=speakers[0], label="source speaker")
                 target_speaker = gr.Dropdown(choices=speakers, value=speakers[0], label="target speaker")
             with gr.Column():
                 message_box = gr.Textbox(label="Message")
                 converted_audio = gr.Audio(label='converted audio')
             btn = gr.Button("Convert!")
-            btn.click(vc_fn, inputs=[source_speaker, target_speaker, record_audio, upload_audio],
+            btn.click(vc_fn, inputs=[source_speaker, target_speaker, audio],
                       outputs=[message_box, converted_audio])
     webbrowser.open("http://127.0.0.1:7860")
     app.launch(share=args.share)
