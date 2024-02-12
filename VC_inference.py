@@ -1,4 +1,4 @@
-from logging_conf import init_logging, suppress_warnings
+from logging_conf import suppress_warnings
 
 suppress_warnings()
 import os
@@ -15,10 +15,15 @@ import librosa
 
 from text import text_to_sequence, _clean_text
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+device = "cpu"
 import logging
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)-8s %(name)-12s]  %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger("vc_inference")
 logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("markdown_it").setLevel(logging.WARNING)
@@ -121,26 +126,23 @@ def create_vc_fn(model, hps, speaker_ids):
     return vc_fn
 
 
-if __name__ == "__main__":
-    init_logging("vc_inference")
-    logger.info(f"Using device: {device}")
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--model_dir",
-        default="./G_latest.pth",
-        help="directory to your fine-tuned model",
-    )
-    parser.add_argument(
-        "--config_dir",
-        default="./finetune_speaker.json",
-        help="directory to your model config file",
-    )
-    parser.add_argument(
-        "--share", default=False, help="make link public (used in colab)"
-    )
+tts_fn = None
+vc_fn = None
+speakers = None
 
-    args = parser.parse_args()
-    hps = utils.get_hparams_from_file(args.config_dir)
+model_cache = {}
+
+
+def load_model(model_path):
+    # get character name by folder name
+    character_name = os.path.basename(model_path)
+    if character_name in model_cache:
+        logger.info(f"Loading model {character_name} from cache")
+        return model_cache[character_name]
+    logger.info(f"Loading model {character_name} from {model_path}")
+    model_g = os.path.join(model_path, "OUTPUT_MODEL", "G_latest.pth")
+    model_config = os.path.join(model_path, "finetune_speaker.json")
+    hps = utils.get_hparams_from_file(model_config)
 
     net_g = SynthesizerTrn(
         len(hps.symbols),
@@ -151,11 +153,51 @@ if __name__ == "__main__":
     ).to(device)
     _ = net_g.eval()
 
-    _ = utils.load_checkpoint(args.model_dir, net_g, None)
+    _ = utils.load_checkpoint(model_g, net_g, None)
     speaker_ids = hps.speakers
     speakers = list(hps.speakers.keys())
     tts_fn = create_tts_fn(net_g, hps, speaker_ids)
     vc_fn = create_vc_fn(net_g, hps, speaker_ids)
+    model_cache[character_name] = (tts_fn, vc_fn, speakers)
+    return tts_fn, vc_fn, speakers
+
+
+def update_model(model_path):
+    global tts_fn, vc_fn, speakers
+    tts_fn, vc_fn, speakers = load_model(model_path)
+
+
+if __name__ == "__main__":
+    logger.info(f"Using device: {device}")
+    parser = argparse.ArgumentParser()
+    # parser.add_argument(
+    #     "--model_dir",
+    #     default="./G_latest.pth",
+    #     help="directory to your fine-tuned model",
+    # )
+    # parser.add_argument(
+    #     "--config_dir",
+    #     default="./finetune_speaker.json",
+    #     help="directory to your model config file",
+    # )
+    parser.add_argument(
+        "--model_dir",
+        default="./characters",
+        help="directory to your fine-tuned models",
+    )
+
+    parser.add_argument(
+        "--share", default=False, help="make link public (used in colab)"
+    )
+
+    args = parser.parse_args()
+    model_dir = args.model_dir
+    characters = os.listdir(model_dir)
+    # list all models
+    logger.info(f"Available models: {characters}")
+    if len(characters) == 0:
+        raise Exception("No model found!")
+    update_model(os.path.join(model_dir, characters[0]))
     app = gr.Blocks()
     with app:
         with gr.Tab("Text-to-Speech"):
@@ -167,9 +209,25 @@ if __name__ == "__main__":
                         value="こんにちわ。",
                         elem_id=f"tts-input",
                     )
+                    model_dropdown = gr.Dropdown(
+                        choices=characters, value=characters[0], label="模型 Model"
+                    )
+
                     # select character
                     char_dropdown = gr.Dropdown(
-                        choices=speakers, value=speakers[0], label="模型 character"
+                        choices=speakers, value=speakers[0], label="说话人 Speaker"
+                    )
+
+                    def update_model_dropdown(character):
+                        update_model(os.path.join(model_dir, character))
+                        return gr.Dropdown(
+                            choices=speakers, value=speakers[0], label="说话人 Speaker"
+                        )
+
+                    model_dropdown.change(
+                        update_model_dropdown,
+                        inputs=[model_dropdown],
+                        outputs=[char_dropdown],
                     )
                     language_dropdown = gr.Dropdown(
                         choices=lang, value=lang[0], label="语言 Language"
@@ -182,13 +240,23 @@ if __name__ == "__main__":
                         label="启用随机性 Enable Randomness",
                         # description="启用随机性会导致同样的输入下，不同次的生成结果不同 Enable Randomness will cause different results for the same input",
                     )
-                    seed_value = gr.Number(value=0, label="手动随机种子 Manual Random Seed")
+                    seed_value = gr.Number(
+                        value=0, label="手动随机种子 Manual Random Seed"
+                    )
                 with gr.Column():
                     text_output = gr.Textbox(label="Message")
                     audio_output = gr.Audio(label="Output Audio", elem_id="tts-audio")
                     btn = gr.Button("Generate!")
+
+                    def tts_fn_fwd(
+                        text, speaker, language, speed, enable_random, seed_value
+                    ):
+                        return tts_fn(
+                            text, speaker, language, speed, enable_random, seed_value
+                        )
+
                     btn.click(
-                        tts_fn,
+                        tts_fn_fwd,
                         inputs=[
                             textbox,
                             char_dropdown,
@@ -219,8 +287,14 @@ if __name__ == "__main__":
                 message_box = gr.Textbox(label="Message")
                 converted_audio = gr.Audio(label="converted audio")
             btn = gr.Button("Convert!")
+
+            def vc_fn_fwd(original_speaker, target_speaker, record_audio, upload_audio):
+                return vc_fn(
+                    original_speaker, target_speaker, record_audio, upload_audio
+                )
+
             btn.click(
-                vc_fn,
+                vc_fn_fwd,
                 inputs=[source_speaker, target_speaker, audio],
                 outputs=[message_box, converted_audio],
             )

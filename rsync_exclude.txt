@@ -12,3 +12,4 @@ short_character_anno.txt
 final_annotation*
 custom_character_voice/
 modified_finetune_speaker.json
+characters/

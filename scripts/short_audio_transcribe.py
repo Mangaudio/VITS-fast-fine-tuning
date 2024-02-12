@@ -46,6 +46,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--languages", default="CJE")
     parser.add_argument("--whisper_size", default="medium")
+    parser.add_argument(
+        "--process_only",
+        default=False,
+        action="store_true",
+    )
     args = parser.parse_args()
     if args.languages == "CJE":
         lang2token = {
@@ -96,6 +101,8 @@ if __name__ == "__main__":
                     logger.warning(f"{wavfile} too long, ignoring\n")
                 save_path = parent_dir + speaker + "/" + f"processed_{i}.wav"
                 torchaudio.save(save_path, wav, target_sr, channels_first=True)
+                if args.process_only:
+                    continue
                 # transcribe text
                 lang, text = transcribe_one(
                     save_path, 128 if args.whisper_size == "large-v3" else 80
@@ -122,16 +129,17 @@ if __name__ == "__main__":
     #     cleaned_text += "\n" if not cleaned_text.endswith("\n") else ""
     #     speaker_annos[i] = path + "|" + sid + "|" + cleaned_text
     # write into annotation
-    if len(speaker_annos) == 0:
-        logger.warning(
-            "No short audios found, this IS expected if you have only uploaded long audios, videos or video links."
-        )
-        logger.warning(
-            "This IS NOT expected if you have uploaded a zip file of short audios. Please check your file structure or make sure your audio language is supported."
-        )
-    with open("short_character_anno.txt", "w", encoding="utf-8") as f:
-        for line in speaker_annos:
-            f.write(line)
+    if not args.process_only:
+        if len(speaker_annos) == 0:
+            logger.warning(
+                "No short audios found, this IS expected if you have only uploaded long audios, videos or video links."
+            )
+            logger.warning(
+                "This IS NOT expected if you have uploaded a zip file of short audios. Please check your file structure or make sure your audio language is supported."
+            )
+        with open("short_character_anno.txt", "w", encoding="utf-8") as f:
+            for line in speaker_annos:
+                f.write(line)
 
     # import json
     # # generate new config
