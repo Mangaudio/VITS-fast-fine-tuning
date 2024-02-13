@@ -29,10 +29,7 @@ def text_to_sequence(text, symbols, cleaner_names):
     sequence = []
     symbol_to_id = {s: i for i, s in enumerate(symbols)}
 
-    if "<raw>" in text:
-        clean_text = text[9:-4]
-    else:
-        clean_text = _clean_text(text, cleaner_names)
+    clean_text = _clean_text(text, cleaner_names)
     logger.info(clean_text)
     logger.info(f" length:{len(clean_text)}")
     for symbol in clean_text:

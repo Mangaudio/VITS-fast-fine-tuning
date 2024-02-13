@@ -4,9 +4,7 @@ matplotlib
 scikit-learn==1.3.2
 scipy
 numpy
-tensorboard
 torch
-torchvision
 torchaudio
 unidecode
 pyopenjtalk-prebuilt
@@ -22,5 +20,5 @@ indic_transliteration
 num_thai==0.0.5
 opencc==1.1.1
 demucs
-git+https://github.com/openai/whisper.git 
 gradio
+fastapi
