@@ -1,0 +1,11 @@
+daemon = False
+bind = "0.0.0.0:8000"
+pidfile = "gunicorn.pid"
+worker_class = "uvicorn.workers.UvicornWorker"
+workers = 1
+loglevel = "debug"
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(T)s %(M)s %(D)s %(L)s'
+accesslog = "logs/gunicorn_access.log"
+errorlog = "logs/gunicorn_error.log"
+logfile = "logs/tts.log"
+pythonpath = "backend"

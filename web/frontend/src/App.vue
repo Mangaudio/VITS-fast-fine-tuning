@@ -7,10 +7,13 @@
       <div class="col-6 col-offset-3 text-center">
         <div class="flex flex-column">
           <div class="flex align-items-center justify-content-center h-4rem font-bold border-round m-2">
-            输入需要转化为语音的文字（不超过150字符）：
+            输入需要转化为语音的文字（不超过80字符）：
+          </div>
+          <div class="flex align-items-center justify-content-center h-3rem border-round m-2">
+            <p>由于服务器机能限制，等待时间可能较长。</p>
           </div>
           <div class="flex align-items-center justify-content-center border-round m-2">
-            <Textarea v-model="text" autoResize rows="5" cols="30" :maxlength="150"></Textarea>
+            <Textarea v-model="text" autoResize rows="5" cols="30" :maxlength="80"></Textarea>
           </div>
           <div class="flex align-items-center justify-content-center border-round m-2">
             <Dropdown v-model="model_name" :options="options" placeholder="请选择角色模型" class="border-round" />

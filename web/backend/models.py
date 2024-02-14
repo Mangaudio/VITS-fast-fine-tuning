@@ -679,7 +679,6 @@ class SynthesizerTrn(nn.Module):
         length_scale=1,
         noise_scale_w=1.0,
         max_len=None,
-        enable_random=(True, 0),
     ):
         x, m_p, logs_p, x_mask = self.enc_p(x, x_lengths)
         if self.n_speakers > 0:
@@ -706,8 +705,6 @@ class SynthesizerTrn(nn.Module):
         logs_p = torch.matmul(attn.squeeze(1), logs_p.transpose(1, 2)).transpose(
             1, 2
         )  # [b, t', t], [b, t, d] -> [b, d, t']
-        if not enable_random[0]:
-            torch.manual_seed(enable_random[1])
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
         z = self.flow(z_p, y_mask, g=g, reverse=True)
         o = self.dec((z * y_mask)[:, :, :max_len], g=g)

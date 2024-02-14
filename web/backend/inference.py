@@ -1,16 +1,8 @@
-import torch
-from torch import no_grad, LongTensor
 import os
-import numpy as np
-import torch
-from torch import no_grad, LongTensor
-import argparse
+from torch import inference_mode, LongTensor
 import commons as commons
-from mel_processing import spectrogram_torch
 import utils as utils
 from models import SynthesizerTrn
-import gradio as gr
-import librosa
 import logging
 from text import text_to_sequence, _clean_text
 
@@ -38,12 +30,12 @@ language_marks = {
 
 
 def create_tts_fn(model, hps, speaker_ids):
-    def tts_fn(text, speaker, language, speed):
+    async def tts_fn(text, speaker, language, speed):
         if language is not None:
             text = language_marks[language] + text + language_marks[language]
         speaker_id = speaker_ids[speaker]
         stn_tst = get_text(text, hps, False)
-        with no_grad():
+        with inference_mode(mode=True):
             x_tst = stn_tst.unsqueeze(0).to(device)
             x_tst_lengths = LongTensor([stn_tst.size(0)]).to(device)
             sid = LongTensor([speaker_id]).to(device)
@@ -60,6 +52,7 @@ def create_tts_fn(model, hps, speaker_ids):
                 .float()
                 .numpy()
             )
+
         del stn_tst, x_tst, x_tst_lengths, sid
         return "Success", (hps.data.sampling_rate, audio)
 

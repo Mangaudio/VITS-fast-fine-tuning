@@ -44,6 +44,7 @@ RELOAD_COUNTER = 20
 
 def load_model_if_changed(model_path) -> bool:
     global model_cache
+    logger.debug(f"load_model_if_changed: {model_path}")
     model_g = os.path.join(model_path, "OUTPUT_MODEL", "G_latest.pth")
     if not os.path.exists(model_g):
         logging.error(f"Model G_latest.pth not found: {model_g}")
@@ -61,7 +62,7 @@ def load_model_if_changed(model_path) -> bool:
                 md5 = hashlib.md5(f.read()).hexdigest()
                 need_reload = need_reload or md5 != old_md5
     if need_reload:
-        logger.info(f"Loaded model from {model_path}")
+        logger.info(f"Loading model from {model_path}")
         tts_fn, speakers = load_model(model_path)
         logger.info(f"Loaded speakers in model {model_path}: {speakers}")
         if len(speakers) == 0:
@@ -80,7 +81,7 @@ def load_model_if_changed(model_path) -> bool:
     return False
 
 
-def get_tts_fn_by_name(model_name) -> tuple[any, str] or None:
+def get_tts_fn_by_name(model_name) -> tuple[any, str]:
     for model in models:
         if model["name"] == model_name:
             load_model_if_changed(model["path"])
